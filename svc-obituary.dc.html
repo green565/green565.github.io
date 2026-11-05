@@ -773,7 +773,7 @@
   </header>
 
   <sc-if value="{{storageWarn}}" hint-placeholder-val="{{ false }}">
-    <p class="notice" style="max-width: 1200px; margin: 12px auto 0; width: calc(100% - 32px)">이 환경에서는 브라우저 저장소를 쓸 수 없어 새로고침하면 입력 내용이 사라질 수 있어요.</p>
+    <p class="notice" style="max-width: 1200px; margin: 12px auto 0; width: calc(100% - 32px)">입력 내용을 임시 보관하지 못했어요. 다시 시도해 주세요.</p>
   </sc-if>
 
   <sc-if value="{{wsOn}}" hint-placeholder-val="{{ true }}">
@@ -1159,7 +1159,7 @@
               <button type="button" class="btn" onClick="{{mg.copyLink}}">링크 복사</button>
               <button type="button" class="btn" onClick="{{mg.kakao}}">카카오톡 공유</button>
             </div>
-            <p class="notice">데모 링크예요. 서버가 없는 체험용 화면이라 다른 기기에서는 열리지 않고, 내용은 이 브라우저에만 저장돼요. ‘받는 사람 화면 보기’로 실제 화면을 확인하세요.</p>
+            <p class="notice">데모 링크예요. 서버가 없는 체험용 화면이라 다른 기기에서는 열리지 않고, 내용은 사이트를 이용하는 동안만 유지되고 새로고침하면 초기화돼요. ‘받는 사람 화면 보기’로 실제 화면을 확인하세요.</p>
           </section>
           <section class="panel">
             <div class="panel-head"><h2>한 번에 발송하기</h2><span class="tag paid">유료 · 예시 요금</span></div>
@@ -1564,7 +1564,7 @@
   <sc-if value="{{isList}}" hint-placeholder-val="{{ false }}">
     <main class="page">
       <h1 class="page-title">내 부고장</h1>
-      <p class="page-sub">이 브라우저에 저장된 부고장이에요.</p>
+      <p class="page-sub">지금 이용 중에 만든 부고장이에요. 새로고침하면 초기화돼요.</p>
       <div class="stack" style="margin-top: 18px">
         <sc-for list="{{obitList}}" as="it" hint-placeholder-count="1">
           <section class="panel list-card">
@@ -1970,7 +1970,7 @@
     <main class="page" style="text-align: center">
       <section class="panel" style="padding: 40px 20px">
         <h1 class="page-title">부고장을 찾을 수 없어요</h1>
-        <p class="page-sub">이 브라우저에 저장된 정보가 없거나 삭제되었어요.</p>
+        <p class="page-sub">정보가 없거나 삭제되었어요. 새로고침하면 시연 데이터가 초기화돼요.</p>
         <div class="row" style="justify-content: center; margin-top: 16px">
           <button type="button" class="btn" onClick="{{goList}}">내 부고장</button>
           <button type="button" class="btn primary" onClick="{{goCreate}}">부고장 만들기</button>
@@ -2373,10 +2373,10 @@ function etqTabs(o) {
 }
 function loadStore() {
   const base = { obits: {}, order: [], condolences: {}, lists: {}, logs: [], thanks: {}, orders: [], draft: emptyObit(), editingId: null, route: { name: 'create' } };
-  try { const raw = window.localStorage.getItem(STORE_KEY) || window.localStorage.getItem(LEGACY_STORE_KEY); if (raw) { const s = JSON.parse(raw); return Object.assign({}, base, s, { draft: Object.assign(emptyObit(), s.draft || {}) }); } } catch (e) {}
+  try { const raw = window.IumMem.getItem(STORE_KEY) || window.IumMem.getItem(LEGACY_STORE_KEY); if (raw) { const s = JSON.parse(raw); return Object.assign({}, base, s, { draft: Object.assign(emptyObit(), s.draft || {}) }); } } catch (e) {}
   return base;
 }
-function saveStore(s) { try { window.localStorage.setItem(STORE_KEY, JSON.stringify(s)); return true; } catch (e) { return false; } }
+function saveStore(s) { try { window.IumMem.setItem(STORE_KEY, JSON.stringify(s)); return true; } catch (e) { return false; } }
 
 /* ============ 부고 문장 해석 (데모 규칙 기반) ============ */
 const REL_SRC = '(배우자|아내|남편|부인|장남|차남|삼남|아들|장녀|차녀|삼녀|딸|며느리|자부|사위|외손자|외손녀|손자|손녀|남동생|여동생|동생|형|오빠|누나|언니|조카)';
@@ -3091,7 +3091,7 @@ class Component extends DCLogic {
       pvFullOpen: () => this.pvFullOpen(), pvFullClose: () => this.pvFullClose(),
       pvTop: (tabbed && mob) ? (S.vw < 768 ? '0px' : (S.hdr - 1) + 'px') : '76px',
       phoneW: pvMini ? '375px' : 'auto', phoneH: pvMini ? Math.round(pvVisH / pvScale) + 'px' : (tabbed && mob && S.pvFull ? (S.vh - 56) + 'px' : 'auto'), phoneTf: pvMini ? 'scale(' + pvScale + ')' : 'none', pvBoxH: pvMini ? (pvVisH + 4) + 'px' : 'auto',
-      savedNote: S.storageWarn ? '이 브라우저에 저장하지 못했어요. 저장 공간을 확인해 주세요.' : (S.savedAt ? '임시 저장됨 · ' + S.savedAt + ' (이 브라우저에 보관)' : '입력 내용은 이 브라우저에 자동 저장돼요.'),
+      savedNote: S.storageWarn ? '입력 내용을 임시 보관하지 못했어요.' : (S.savedAt ? '임시 저장됨 · ' + S.savedAt + ' (새로고침하면 초기화)' : '입력 내용은 사이트를 이용하는 동안 유지돼요. 새로고침하면 초기화돼요.'),
       savedWarn: S.storageWarn ? 'warn' : '',
       osecs: OSEC.map((k, i) => ({ key: k, open: S.osec === k, cls: S.osec === k ? 'open' : 'closed', exp: S.osec === k ? 'true' : 'false' })),
       osecToggle: OSEC.reduce((o, k) => { o[k] = () => { const nx = S.osec === k ? '' : k; this.setState({ osec: nx }); if (nx) { this.pvScrollTo(k); if (mob) setTimeout(() => this.revealSub(k), 40); } }; return o; }, {}),

@@ -23,13 +23,39 @@
   function path() { return norm(location.pathname); }
   function segs(p) { return norm(p).split('/').filter(Boolean).slice(1); }
 
+  /* 시연용 데이터 저장소 — 메모리 전용
+   * 사이트를 이용하는 동안(같은 페이지 안에서 화면 이동·뒤로 가기·앞으로 가기)에는 값이 유지되고,
+   * 새로고침·탭 닫기·재접속·다른 브라우저에서는 항상 최초 상태로 시작합니다.
+   * localStorage / sessionStorage 에는 아무것도 쓰지 않습니다. (localStorage와 같은 사용법을 맞춰 둠)
+   */
+  var memData = Object.create(null);
+  var IumMem = {
+    getItem: function (k) { k = String(k); return Object.prototype.hasOwnProperty.call(memData, k) ? memData[k] : null; },
+    setItem: function (k, v) { memData[String(k)] = String(v); },
+    removeItem: function (k) { delete memData[String(k)]; },
+    clear: function () { memData = Object.create(null); },
+    keys: function () { return Object.keys(memData); }
+  };
+  window.IumMem = IumMem;
+
+  /* 이전 버전이 브라우저 저장소에 남긴 이움레터 데이터 정리 (다음 접속에 이전 입력이 보이지 않도록) */
+  (function purgeOld() {
+    [function () { return window.localStorage; }, function () { return window.sessionStorage; }].forEach(function (get) {
+      try {
+        var st = get(); if (!st) return;
+        var del = [];
+        for (var i = 0; i < st.length; i++) { var k = st.key(i); if (k && /^iumletter[:\-]/.test(k)) del.push(k); }
+        del.forEach(function (k) { st.removeItem(k); });
+      } catch (e) {}
+    });
+  })();
+
   var last = {};
-  try { last = JSON.parse(sessionStorage.getItem(LAST_KEY) || '{}') || {}; } catch (e) { last = {}; }
   function remember(p) {
     var s = serviceOf(p);
     if (s === 'home') return;
     last[s] = p;
-    try { sessionStorage.setItem(LAST_KEY, JSON.stringify(last)); } catch (e) {}
+    try { IumMem.setItem(LAST_KEY, JSON.stringify(last)); } catch (e) {}
   }
 
   function keepTitle() { if (document.title !== TITLE) document.title = TITLE; }
@@ -76,6 +102,11 @@
   window.IUM = IUM;
 
   window.addEventListener('popstate', function () { remember(path()); emit(); });
+
+  // 브라우저가 다른 문서에서 돌아올 때 이전 편집 화면을 캐시에서 되살리지 않습니다.
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) window.location.reload();
+  });
 
   /* 알 수 없는 주소는 통합 홈으로 */
   (function () {

@@ -2359,9 +2359,9 @@ class Component extends DCLogic {
     try { document.title = '이움레터'; } catch (e) {}
     { const s0 = this.state; this._prevView = { mode: s0.mode, screen: s0.screen, adminTab: s0.adminTab, sampleTpl: s0.sampleTpl, popupNonce: s0.popupNonce, focus: s0.focus }; }
     this.ivTimer = setInterval(() => this.forceUpdate(), 30000);
-    // restore last saved invitation (prototype: localStorage)
+    // restore last saved invitation (prototype: in-memory, IumMem — 새로고침하면 초기화)
     try {
-      const raw = (window.localStorage.getItem('iumletter:wedding:draft') || window.localStorage.getItem('iumletter-draft'));
+      const raw = (window.IumMem.getItem('iumletter:wedding:draft') || window.IumMem.getItem('iumletter-draft'));
       if (raw) {
         const snap = JSON.parse(raw);
         if (snap && snap.v === 1 && snap.data) {
@@ -2388,8 +2388,8 @@ class Component extends DCLogic {
   mobMount() {
     // 임시 저장본(자동 저장)이 마지막 '저장'보다 최신이면 이어서 작성
     try {
-      const raw = window.localStorage.getItem('iumletter:wedding:autosave');
-      const dRaw = window.localStorage.getItem('iumletter:wedding:draft');
+      const raw = window.IumMem.getItem('iumletter:wedding:autosave');
+      const dRaw = window.IumMem.getItem('iumletter:wedding:draft');
       const dTs = (() => { try { const x = JSON.parse(dRaw || 'null'); return (x && x.ts) || 0; } catch (e) { return 0; } })();
       const a = raw ? JSON.parse(raw) : null;
       if (a && a.v === 1 && a.data && (a.ts || 0) > dTs) {
@@ -2436,12 +2436,12 @@ class Component extends DCLogic {
       const st = this.state, now = new Date();
       const snap = { v: 1, ts: now.getTime(), data: st.data, template: st.template, design: st.design, sections: st.sections, share: st.share, wreath: st.wreath, thanks: st.thanks };
       let fail = false;
-      try { window.localStorage.setItem('iumletter:wedding:autosave', JSON.stringify(snap)); }
+      try { window.IumMem.setItem('iumletter:wedding:autosave', JSON.stringify(snap)); }
       catch (e) {
         try {
           const lite = JSON.parse(JSON.stringify(snap)); lite.lite = true;
           lite.data.coverPhoto = ''; lite.data.coverExtras = ['', '', '']; lite.data.gallery = lite.data.gallery.map((g) => ({ id: g.id, src: '' })); lite.data.thanks = Object.assign({}, lite.data.thanks, { photo: '' }); this.stripCxImages(lite.data);
-          window.localStorage.setItem('iumletter:wedding:autosave', JSON.stringify(lite));
+          window.IumMem.setItem('iumletter:wedding:autosave', JSON.stringify(lite));
           fail = 'photo';
         } catch (e2) { fail = true; }
       }
@@ -2557,14 +2557,14 @@ class Component extends DCLogic {
     let ok = false, note = '';
     try { JSON.stringify(snap); ok = true; } catch (e) { ok = false; }
     if (!ok) { this.toast('저장에 실패했어요. 다시 시도해 주세요.'); return; }
-    try { window.localStorage.setItem('iumletter:wedding:draft', JSON.stringify(snap)); }
+    try { window.IumMem.setItem('iumletter:wedding:draft', JSON.stringify(snap)); }
     catch (e) {
       try {
         const lite = JSON.parse(JSON.stringify(snap));
         lite.data.coverPhoto = ''; lite.data.gallery = lite.data.gallery.map((g) => ({ id: g.id, src: '' })); lite.data.thanks = Object.assign({}, lite.data.thanks, { photo: '' }); this.stripCxImages(lite.data);
-        window.localStorage.setItem('iumletter:wedding:draft', JSON.stringify(lite));
-        note = ' (사진은 용량 문제로 이번 세션에만 보관)';
-      } catch (e2) { note = ' (이 브라우저에서는 세션 동안만 보관)'; }
+        window.IumMem.setItem('iumletter:wedding:draft', JSON.stringify(lite));
+        note = '';
+      } catch (e2) { note = ''; }
     }
     this.setState({ savedAt: savedAt, mode: 'admin', adminTab: 'dash', tplPrev: false });
     try { window.scrollTo(0, 0); } catch (e) {}
@@ -3230,12 +3230,12 @@ class Component extends DCLogic {
   aiPersist() {
     clearTimeout(this.aiPT);
     this.aiPT = setTimeout(() => {
-      try { const c = this.state.chat; window.localStorage.setItem('iumletter:wedding:aichat', JSON.stringify({ v: 1, msgs: c.msgs.slice(-40), ctx: this._aiCtx || {}, suggest: c.suggest || [] })); } catch (e) {}
+      try { const c = this.state.chat; window.IumMem.setItem('iumletter:wedding:aichat', JSON.stringify({ v: 1, msgs: c.msgs.slice(-40), ctx: this._aiCtx || {}, suggest: c.suggest || [] })); } catch (e) {}
     }, 400);
   }
   aiRestore() {
     try {
-      const raw = window.localStorage.getItem('iumletter:wedding:aichat'); if (!raw) return;
+      const raw = window.IumMem.getItem('iumletter:wedding:aichat'); if (!raw) return;
       const j = JSON.parse(raw); if (!j || j.v !== 1 || !Array.isArray(j.msgs)) return;
       const msgs = j.msgs.filter((m) => m && (m.role === 'user' || m.role === 'ai') && typeof m.text === 'string').map((m) => Object.assign({}, m, { proposals: (m.proposals || []).map((p) => Object.assign({}, p, { ui: Object.assign({ applied: false, target: p.target || '', sel: {} }, p.ui || {}, { token: '' }) })) }));
       this._aiCtx = j.ctx || {};
@@ -3577,7 +3577,7 @@ class Component extends DCLogic {
       mnavCls: s.mnav ? 'mnav-open' : '', mnavStr: s.mnav ? 'true' : 'false', mnavLabel: s.mnav ? '메뉴 닫기' : '메뉴 열기',
       mbar: mbarBtns.length > 0, mbarCls: (s.kb ? 'kb' : '') + (mbarBtns.length > 0 ? ' has-mbar' : '') + (s.chat.open && scr.editor && mob ? ' ai-open' : ''),
       uploadingOn: s.uploading > 0, uploadingNote: '사진을 불러오는 중이에요… (' + s.uploading + ')',
-      asNote: s.autosaveFail === true ? '임시 저장 실패 · 브라우저 저장 공간이 부족해요. [저장]을 눌러 주세요.' : s.autosaveFail === 'photo' ? '임시 저장됨 ' + s.autosaveAt + ' · 사진은 용량 문제로 임시 저장에서 제외됐어요' : (s.autosaveAt ? '임시 저장됨 · ' + s.autosaveAt + ' (이 브라우저에 보관)' : '입력 내용은 이 브라우저에 자동으로 임시 저장돼요'),
+      asNote: s.autosaveFail === true ? '임시 저장 실패 · [저장]을 눌러 주세요.' : s.autosaveFail === 'photo' ? '임시 저장됨 ' + s.autosaveAt + ' · 사진은 용량 문제로 임시 저장에서 제외됐어요' : (s.autosaveAt ? '임시 저장됨 · ' + s.autosaveAt + ' (새로고침하면 초기화)' : '입력 내용은 사이트를 이용하는 동안 유지돼요 · 새로고침하면 초기화'),
       asWarn: !!s.autosaveFail,
       isTplish: isTplish, adminDash: adminDash, adminThanks: adminThanks, adminList: mode === 'admin' && !adminDash && !adminThanks,
       phoneTplName: scr.samples ? T[s.sampleTpl].name : tpl.name,
